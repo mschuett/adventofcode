@@ -1329,37 +1329,327 @@ def day17_2():
 
 def day18():
     data = '''\
+1 + 2 * 3 + 4 * 5 + 6
 2 * 3 + (4 * 5)
 5 + (8 * 3 + 9 + 3 * 4 * 3)
 5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))
 ((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2
 '''
-    #data = requests.get('https://adventofcode.com/2020/day/18/input', headers=advent_headers).text
+    # data = requests.get('https://adventofcode.com/2020/day/18/input', headers=advent_headers).text
 
-    def eval_expr(expr: str) -> int:
-        if expr.isdigit():
-            return int(expr)
-        elif expr[0] == '(':
-            assert expr[-1] == ')'
-            return eval_term(expr)
+    # Part 1
+    def scan_parenthesis(term: str) -> int:
+        assert term[0] == '('
+        level = 0
+        i = 1
+        while i < len(term):
+            char = term[i]
+            if char == '(':
+                level += 1
+            elif char == ')':
+                if level > 0:
+                    level -= 1
+                else:
+                    return i
+            i += 1
+        raise ValueError(f"non-matching parenthesis in term '{term}'")
+
+    def op(op_char: str, left: int, right: int) -> int:
+        result: int
+        if op_char == '+':
+            result = left + right
+        elif op_char == '*':
+            result = left * right
         else:
-            raise ValueError(f"error: eval_expr({expr})")
-
-    def eval_term(term: str) -> int:
-        result = 0
-        if term[0].isdigit():
-            assert term[1] == ' '
-            op = term[2]
-            assert term[3] == ' '
-            rest_term = term[4:]
-
-            if op == '+':
-                result += int(term[0]) + eval_term(rest_term)
+            raise ValueError(f"unexpected operator '{op_char}'")
+        # print(f"op({op_char}, {left}, {right}) -> {result}")
         return result
 
+    def eval_term(term: str) -> int:
+        if term.isdigit():
+            return int(term)
+        if term[0].isdigit() and term[1].isspace() and term[3].isspace():
+            return op(term[2], int(term[0]), eval_term(term[4:]))
+        if term[0] == '(':
+            end_index = scan_parenthesis(term)
+            assert term[end_index] == ')'
+            if end_index+1 == len(term):
+                return eval_term(term[1:end_index])
+            assert term[end_index+1].isspace()
+            assert term[end_index+2] in ['+', '*']
+            assert term[end_index+3].isspace()
+            return op(term[end_index+2], eval_term(term[1:end_index]), eval_term(term[end_index+4:]))
+        raise ValueError(f"unexpected case")
+
+    # result_sum = 0
+    # for line in data.strip().splitlines():
+    #     # very stupid hack, because my evaluation is right-associative and not left-associative
+    #     reversed_term = line.strip()[::-1].replace('(', 'O').replace(')', '(').replace('O', ')')
+    #     result = eval_term(reversed_term)
+    #     result_sum += result
+    #     print(f"{result} = {line}")
+    # print(f"result sum {result_sum}")
+
+    # Part 1a
+
+
+    class Stack:
+        def __init__(self):
+            self.items = []
+
+        def isEmpty(self):
+            return self.items == []
+
+        def push(self, item):
+            self.items.append(item)
+
+        def pop(self):
+            return self.items.pop()
+
+        def peek(self):
+            return self.items[len(self.items)-1]
+
+        def size(self):
+            return len(self.items)
+
+    class BinaryTree:
+        def __init__(self,rootObj):
+            self.key = rootObj
+            self.leftChild = None
+            self.rightChild = None
+
+        def insertLeft(self,newNode):
+            if self.leftChild == None:
+                self.leftChild = BinaryTree(newNode)
+            else:
+                t = BinaryTree(newNode)
+                t.leftChild = self.leftChild
+                self.leftChild = t
+
+        def insertRight(self,newNode):
+            if self.rightChild == None:
+                self.rightChild = BinaryTree(newNode)
+            else:
+                t = BinaryTree(newNode)
+                t.rightChild = self.rightChild
+                self.rightChild = t
+
+        def getRightChild(self):
+            return self.rightChild
+
+        def getLeftChild(self):
+            return self.leftChild
+
+        def setRootVal(self,obj):
+            self.key = obj
+
+        def getRootVal(self):
+            return self.key
+
+        def __str__(self):
+            return f"[ {self.getLeftChild()} {self.getRootVal()} {self.getRightChild()}]"
+
+    def buildParseTree(fpexp):
+        fpexp = fpexp.replace("(", "( ").replace(")", " )")
+        fplist = fpexp.split()
+        pStack = Stack()
+        eTree = BinaryTree('')
+        pStack.push(eTree)
+        currentTree = eTree
+
+        for i in fplist:
+            if i == '(':
+                currentTree.insertLeft('')
+                pStack.push(currentTree)
+                currentTree = currentTree.getLeftChild()
+
+            elif i in ['+', '-', '*', '/']:
+                currentTree.setRootVal(i)
+                currentTree.insertRight('')
+                pStack.push(currentTree)
+                currentTree = currentTree.getRightChild()
+
+            elif i == ')':
+                currentTree = pStack.pop()
+
+            elif i not in ['+', '-', '*', '/', ')']:
+                try:
+                    currentTree.setRootVal(int(i))
+                    parent = pStack.pop()
+                    currentTree = parent
+
+                except ValueError:
+                    raise ValueError("token '{}' is not a valid integer".format(i))
+
+        return eTree
+
+    def parenthesis_sublist(term: List[str]) -> List:
+        level = 0
+        i = 1
+        while i < len(term):
+            char = term[i]
+            if char == '(':
+                level += 1
+            elif char == ')':
+                if level > 0:
+                    level -= 1
+                else:
+                    return list()
+            i += 1
+        raise ValueError(f"non-matching parenthesis in term '{term}'")
+
+    def postorder(tree):
+        if tree != None:
+            postorder(tree.getLeftChild())
+            postorder(tree.getRightChild())
+            print(tree.getRootVal())
+
+    result_sum = 0
     for line in data.strip().splitlines():
-        line.strip().split("*+")
+        pt = buildParseTree(line)
+        postorder(pt)  #defined and explained in the next section
+        print(pt)
+        return
 
 
-# only run the latest day/function
-day18()
+def day19():
+    data = '''\
+0: 4 1 5
+1: 2 3 | 3 2
+2: 4 4 | 5 5
+3: 4 5 | 5 4
+4: "a"
+5: "b"
+
+ababbb
+bababa
+abbbab
+aaabbb
+aaaabbb
+'''
+    data = requests.get('https://adventofcode.com/2020/day/19/input', headers=advent_headers).text
+
+    rules_input, data_input = data.strip().split("\n\n")
+    rules_input = rules_input.splitlines()
+    data_input = data_input.splitlines()
+
+    class Rule(object):
+        id: str
+        type: str
+
+        content_leaf: str
+        content_disjunction: List
+        content_conjunction: List[int]
+
+        def __init__(self, line: str):
+            if ":" not in line:
+                print(f"no ':' in line '{line}'")
+                raise ValueError()
+            rule_number, rule_content = line.strip().split(":")
+            self.id = rule_number
+
+            if '"' in rule_content:
+                self.type = "l"
+                self.content_leaf = rule_content.replace('"', '').strip()
+            elif '|' in rule_content:
+                self.type = "o"
+                self.content_disjunction = [Rule(f"{self.id}_{i}: {s}") for i,s in enumerate(rule_content.split('|'))]
+            else:
+                self.type = "r"
+                self.content_conjunction = [int(i) for i in rule_content.split()]
+
+        def __repr__(self):
+            if self.type == "l":
+                content = self.content_leaf
+            elif self.type == "o":
+                content = self.content_disjunction
+            elif self.type == "r":
+                content = self.content_conjunction
+            return f"Rule({self.id}, {self.type}, {content})"
+
+        def check(self, input: str, all_rules: Dict = {}) -> bool:
+            if self.type == "l":
+                return self.content_leaf == input
+            elif self.type == "o":
+                return any([r.check(input, all_rules) for r in self.content_disjunction])
+            elif self.type == "r":
+                subrules = [all_rules[i] for i in self.content_conjunction]
+                if len(subrules) == 0:
+                    raise ValueError("invalid: 0 subrules")
+                elif len(subrules) == 1:
+                    return subrules[0].check(input, all_rules)
+                elif len(subrules) == 2:
+                    if subrules[0].type == 'l':
+                        pivot1 = 1
+                        return subrules[0].check(input[:pivot1], all_rules) and \
+                               subrules[1].check(input[pivot1:], all_rules)
+                    elif subrules[1].type == 'l':
+                        pivot1 = len(input)-1
+                        return subrules[0].check(input[:pivot1], all_rules) and \
+                               subrules[1].check(input[pivot1:], all_rules)
+                    else:
+                        for pivot in range(0,len(input)):
+                            if subrules[0].check(input[:pivot], all_rules) and \
+                               subrules[1].check(input[pivot:], all_rules):
+                                return True
+                elif len(subrules) == 3:
+                    if subrules[0].type == 'l' and subrules[2].type == 'l':
+                        pivot1 = 1
+                        pivot2 = len(input)-1
+                        return subrules[0].check(input[:pivot1], all_rules) and \
+                               subrules[1].check(input[pivot1:pivot2], all_rules) and \
+                               subrules[2].check(input[pivot2:], all_rules)
+                    elif subrules[0].type == 'l':
+                        pivot1 = 1
+                        for pivot2 in range(pivot1, len(input)):
+                            if subrules[0].check(input[:pivot1], all_rules) and \
+                               subrules[1].check(input[pivot1:pivot2], all_rules) and \
+                               subrules[2].check(input[pivot2:], all_rules):
+                                return True
+                    elif subrules[2].type == 'l':
+                        pivot2 = len(input)-1
+                        for pivot1 in range(0, pivot2):
+                            if subrules[0].check(input[:pivot1], all_rules) and \
+                               subrules[1].check(input[pivot1:pivot2], all_rules) and \
+                               subrules[2].check(input[pivot2:], all_rules):
+                                return True
+                    else:
+                        for pivot1 in range(0, len(input)):
+                            for pivot2 in range(pivot1, len(input)):
+                                if subrules[0].check(input[:pivot1], all_rules) and \
+                                   subrules[1].check(input[pivot1:pivot2], all_rules) and \
+                                   subrules[2].check(input[pivot2:], all_rules):
+                                    return True
+                else:
+                    raise NotImplementedError("missing: >2 subrules")
+                return False
+            else:
+                raise ValueError("invalid Rule object")
+
+    rules: Dict[int, Rule] = {}
+    for rule_line in rules_input:
+        r: Rule = Rule(rule_line)
+        rules[int(r.id)] = r
+
+    print(rules)
+
+    count_matches = 0
+    for input in data_input:
+        if rules[0].check(input, rules):
+            count_matches += 1
+    print(f"matching inputs: {count_matches}")
+
+    # Part 2
+    rules[8] = Rule('8: 42 | 42 8')
+    rules[11] = Rule('11: 42 31 | 42 11 31')
+    count_matches = 0
+    for input in data_input:
+        if rules[0].check(input, rules):
+            print(f"+ {input}")
+            count_matches += 1
+        else:
+            print(f"- {input}")
+    print(f"matching inputs: {count_matches}")
+
+
+day19()
