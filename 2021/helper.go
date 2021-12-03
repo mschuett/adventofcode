@@ -5,8 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 )
 
 func downloadHelper(year int, day int) string {
@@ -30,13 +28,4 @@ func downloadHelper(year int, day int) string {
 		panic(err)
 	}
 	return string(bodyBytes)
-}
-
-func readNumbersAsSlice(inputText string) []int {
-	var numbers []int
-	for _, line := range strings.Split(strings.TrimSpace(inputText), "\n") {
-		var num, _ = strconv.Atoi(strings.TrimSpace(line))
-		numbers = append(numbers, num)
-	}
-	return numbers
 }
