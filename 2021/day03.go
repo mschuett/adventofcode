@@ -20,7 +20,7 @@ func readReports(inputText string) []int32 {
 	return reports
 }
 
-func day3() {
+func day3a() {
 	/*
 	   note: this is crazily overengineered. I wanted to use bit-operations,
 	   even though string-operations would have been easier for every step. :(
@@ -131,4 +131,123 @@ func day3() {
 
 	fmt.Printf("co2ScrubberRating: %v\n", co2ScrubberRating)
 	fmt.Printf("life support rating: %v\n", co2ScrubberRating*oxygenGeneratorRating)
+}
+
+func readStringsAsSlice(inputText string) []string {
+	var reports []string
+	for _, line := range strings.Split(strings.TrimSpace(inputText), "\n") {
+		var lineContent = strings.Split(strings.TrimSpace(line), " ")
+		if (len(lineContent)) != 1 { // skip unexpected format
+			continue
+		}
+		reports = append(reports, lineContent[0])
+	}
+	return reports
+}
+
+func day3b() {
+	/* a little bit better, using string & char operations */
+
+	//var inputText = "00100\n11110\n10110\n10111\n10101\n01111\n00111\n11100\n10000\n11001\n00010\n01010\n"
+	var inputText = downloadHelper(2021, 3)
+	var reports = readStringsAsSlice(inputText)
+	//fmt.Printf("%v\n", reports)
+
+	var bitCount = make([]int, len(reports[0]))
+	for _, report := range reports {
+		for i := 0; i < len(report); i++ {
+			if report[i] == '1' {
+				bitCount[i]++
+			}
+		}
+	}
+	fmt.Printf("bitCount: %v\n", bitCount)
+	var gammaStr = make([]rune, len(reports[0]))
+	var epsilonStr = make([]rune, len(reports[0]))
+	for i, count := range bitCount {
+		if 2*count > len(reports) {
+			gammaStr[i] = '1'
+			epsilonStr[i] = '0'
+		} else {
+			gammaStr[i] = '0'
+			epsilonStr[i] = '1'
+		}
+	}
+	var gamma, _ = strconv.ParseInt(string(gammaStr), 2, 32)
+	var epsilon, _ = strconv.ParseInt(string(epsilonStr), 2, 32)
+	fmt.Printf("gamma: %v, %v\n", string(gammaStr), gamma)
+	fmt.Printf("epsilon: %v, %v\n", string(epsilonStr), epsilon)
+	fmt.Printf("result: %v\n", gamma*epsilon)
+
+	// Part 2
+	var oxygenGeneratorRating string
+	var oxygenGeneratorRatingWorklist = make([]string, len(reports))
+	copy(oxygenGeneratorRatingWorklist, reports)
+
+	for i := 0; i < len(bitCount) && len(oxygenGeneratorRatingWorklist) > 0; i++ {
+		// count bits in place i
+		var countOne = 0
+		for _, report := range oxygenGeneratorRatingWorklist {
+			if report[i] == '1' {
+				countOne++
+			}
+		}
+		var selectChar uint8 = '0' // new list with zeroes in place i
+		if 2*countOne >= len(oxygenGeneratorRatingWorklist) {
+			selectChar = '1' // new list with ones in place i
+		}
+
+		var nextIterationWorklist = make([]string, 0)
+		for _, report := range oxygenGeneratorRatingWorklist {
+			if report[i] == selectChar {
+				nextIterationWorklist = append(nextIterationWorklist, report)
+			}
+		}
+
+		oxygenGeneratorRatingWorklist = nextIterationWorklist
+		if len(oxygenGeneratorRatingWorklist) == 1 {
+			// one value left = found our rating
+			fmt.Printf("one value left => found our oxygenGeneratorRating %v\n", oxygenGeneratorRatingWorklist)
+			oxygenGeneratorRating = oxygenGeneratorRatingWorklist[0]
+			break
+		}
+	}
+	var oxygenGeneratorRatingInt, _ = strconv.ParseInt(oxygenGeneratorRating, 2, 32)
+	fmt.Printf("oxygenGeneratorRating: %v %v\n", oxygenGeneratorRating, oxygenGeneratorRatingInt)
+
+	var co2ScrubberRating string
+	var co2ScrubberRatingWorklist = make([]string, len(reports))
+	copy(co2ScrubberRatingWorklist, reports)
+
+	for i := 0; i < len(bitCount) && len(co2ScrubberRatingWorklist) > 0; i++ {
+		// count bits in place i
+		var countOne = 0
+		for _, report := range co2ScrubberRatingWorklist {
+			if report[i] == '1' {
+				countOne++
+			}
+		}
+		var selectChar uint8 = '0' // new list with zeroes in place i
+		if 2*countOne < len(co2ScrubberRatingWorklist) {
+			selectChar = '1' // new list with ones in place i
+		}
+
+		var nextIterationWorklist = make([]string, 0)
+		for _, report := range co2ScrubberRatingWorklist {
+			if report[i] == selectChar {
+				nextIterationWorklist = append(nextIterationWorklist, report)
+			}
+		}
+
+		co2ScrubberRatingWorklist = nextIterationWorklist
+		if len(co2ScrubberRatingWorklist) == 1 {
+			// one value left = found our rating
+			fmt.Printf("one value left => found our oxygenGeneratorRating %v\n", co2ScrubberRatingWorklist)
+			co2ScrubberRating = co2ScrubberRatingWorklist[0]
+			break
+		}
+	}
+	var co2ScrubberRatingInt, _ = strconv.ParseInt(co2ScrubberRating, 2, 32)
+	fmt.Printf("co2ScrubberRating: %v %v\n", co2ScrubberRating, co2ScrubberRatingInt)
+	fmt.Printf("result: %v\n", oxygenGeneratorRatingInt*co2ScrubberRatingInt)
 }
