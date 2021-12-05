@@ -19,7 +19,7 @@ type DirInstruction struct {
 	amount int
 }
 
-type Position struct {
+type DepthPosition struct {
 	depth   int
 	forward int
 }
@@ -49,7 +49,7 @@ func day2aImpl(inputText string) int {
 	var instructions = readDirections(inputText)
 	fmt.Printf("%v\n", instructions)
 
-	var pos = Position{0, 0}
+	var pos = DepthPosition{0, 0}
 	for _, instruction := range instructions {
 		switch instruction.dir {
 		case Forward:

@@ -29,3 +29,10 @@ func downloadHelper(year int, day int) string {
 	}
 	return string(bodyBytes)
 }
+
+func minmax(a, b int) (int, int) {
+	if a < b {
+		return a, b
+	}
+	return b, a
+}
