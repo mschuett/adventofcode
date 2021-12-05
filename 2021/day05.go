@@ -76,39 +76,28 @@ func createMapWithVentLines(ventLines []VentLine2d) Map2d {
 	for i := 0; i < len(ventLines); i++ {
 		from, to := minmaxCoordinates(ventLines[i].from, ventLines[i].to)
 		if from.x == to.x {
+			// vertical
 			for y := from.y; y <= to.y; y++ {
 				mymap[from.x][y] += 1
 			}
 		} else if from.y == to.y {
+			// horizontal
 			for x := from.x; x <= to.x; x++ {
 				mymap[x][from.y] += 1
 			}
 		} else if (to.y - from.y) == (to.x - from.x) {
 			// diagonal left-to-right
-			//fmt.Printf("diagonal left-to-right %d,%d -> %d,%d (%d,%d -> %d,%d)\n",
-			//	ventLines[i].from.x, ventLines[i].from.y,
-			//	ventLines[i].to.x, ventLines[i].to.y,
-			//	from.x, from.y,
-			//	to.x, to.y)
 			for i := 0; i <= (to.x - from.x); i++ {
 				mymap[from.x+i][from.y+i] += 1
-				//fmt.Printf("set mark %d,%d\n", from.x+i, from.y+i)
 			}
 		} else if (from.y - to.y) == (to.x - from.x) {
 			// diagonal right-to-left
-			//fmt.Printf("diagonal right-to-left %d,%d -> %d,%d (%d,%d -> %d,%d)\n",
-			//	ventLines[i].from.x, ventLines[i].from.y,
-			//	ventLines[i].to.x, ventLines[i].to.y,
-			//	from.x, from.y,
-			//	to.x, to.y)
 			// still two cases, depending on x/y dir
 			for i := 0; i <= (to.x - from.x); i++ {
 				mymap[from.x+i][from.y-i] += 1
-				// fmt.Printf("set mark1 %d,%d\n", from.x+i, from.y-i)
 			}
 			for i := 0; i <= (from.x - to.x); i++ {
 				mymap[from.x-i][from.y+i] += 1
-				// fmt.Printf("set mark2 %d,%d\n", from.x-i, from.y+i)
 			}
 		} else {
 			fmt.Printf("unhandled line %d,%d -> %d,%d\n",
@@ -148,11 +137,11 @@ func day5() {
 	var inputText = downloadHelper(2021, 5)
 	// var inputText = "0,9 -> 5,9\n8,0 -> 0,8\n9,4 -> 3,4\n2,2 -> 2,1\n7,0 -> 7,4\n6,4 -> 2,0\n0,9 -> 2,9\n3,4 -> 1,4\n0,0 -> 8,8\n5,5 -> 8,2\n"
 	ventLines := readVentLinesCoordinates(inputText)
-	for i := 0; i < len(ventLines); i++ {
-		fmt.Printf("%d,%d -> %d,%d\n",
-			ventLines[i].from.x, ventLines[i].from.y,
-			ventLines[i].to.x, ventLines[i].to.y)
-	}
+	//for i := 0; i < len(ventLines); i++ {
+	//	fmt.Printf("%d,%d -> %d,%d\n",
+	//		ventLines[i].from.x, ventLines[i].from.y,
+	//		ventLines[i].to.x, ventLines[i].to.y)
+	//}
 	mymap := createMapWithVentLines(ventLines)
 	// printMap(mymap)
 	overlappingCoordinates := countOverlappingLinesCoordinates(mymap)
