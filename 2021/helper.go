@@ -36,3 +36,43 @@ func minmax(a, b int) (int, int) {
 	}
 	return b, a
 }
+
+// stack implementation from http://tobin.cc/blog/stack/
+
+// Stack of bytes
+type Stack []byte
+
+// IsEmpty: check if stack is empty
+func (s *Stack) IsEmpty() bool {
+	return len(*s) == 0
+}
+
+// Push a new byte onto the stack
+func (s *Stack) Push(x byte) {
+	*s = append(*s, x)
+}
+
+// Pop: remove and return top element of stack, return false if stack is empty
+func (s *Stack) Pop() (byte, bool) {
+	if s.IsEmpty() {
+		return 0, false
+	}
+
+	i := len(*s) - 1
+	x := (*s)[i]
+	*s = (*s)[:i]
+
+	return x, true
+}
+
+// Peek: return top element of stack, return false if stack is empty
+func (s *Stack) Peek() (byte, bool) {
+	if s.IsEmpty() {
+		return 0, false
+	}
+
+	i := len(*s) - 1
+	x := (*s)[i]
+
+	return x, true
+}
