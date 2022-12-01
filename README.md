@@ -16,3 +16,6 @@ For 2021 I chose Golang, because I have not used it for about 5 years now. I hop
 
 I started the 2015 puzzles later as a way to write my very first Code in Kotlin.
 
+## 2022
+
+I go with Kotlin again. I am kind of stressed out, so I do not want to lean a completely new language but also do not want Python or Golang again.
