@@ -1,4 +1,4 @@
-fun day3(test: Boolean = true) {
+fun day03(test: Boolean = true) {
     val inputText = if (test)
         """
             vJrwpWtwJgWrhcsFMMfFFhFp

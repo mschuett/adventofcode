@@ -1,4 +1,4 @@
-fun day4(test: Boolean = true) {
+fun day04(test: Boolean = true) {
     val inputText = if (test)
         """
             2-4,6-8

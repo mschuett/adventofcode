@@ -66,7 +66,7 @@ enum class RpsOutcome(private val value: Int) {
     }
 }
 
-fun day2(test: Boolean = true) {
+fun day02(test: Boolean = true) {
     val inputText = if (test)
         """
             A Y

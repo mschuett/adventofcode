@@ -1,4 +1,4 @@
-fun day1(test: Boolean = true) {
+fun day01(test: Boolean = true) {
     val inputText = if (test)
         """
             1000
