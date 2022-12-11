@@ -46,7 +46,7 @@ class CrtSim {
     var output = ""
     private fun outputBeam() {
         val pixel = (cycle % 40)
-        output += if ((x-1) <= pixel && pixel <= (x+1)) {
+        output += if (pixel in x-1 .. x+1) {
             '#'
         } else {
             '.'
@@ -217,7 +217,7 @@ fun day10(test: Boolean = true) {
         .map {
             val words = it.split(' ')
             CrtInstruction(
-                CrtOp.valueOf(words.first()),
+                CrtOp.valueOf(words.first().replaceFirstChar { c -> c.uppercase()}),
                 if (words.size == 1) 0 else words.last().toInt())
         }
         .also(::println)
