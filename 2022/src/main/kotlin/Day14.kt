@@ -29,7 +29,7 @@ data class RegolithPosition2d(val x: Int, val y: Int) {
 }
 
 data class RegolithWall(val spec: List<RegolithPosition2d>) {
-    private var allPositions : Set<RegolithPosition2d> = setOf()
+    var allPositions : Set<RegolithPosition2d> = setOf()
     init {
         // precalculate all wall positions
         require(spec.isNotEmpty())
@@ -55,7 +55,19 @@ data class RegolithWall(val spec: List<RegolithPosition2d>) {
 }
 
 data class RegolithCave(val start: RegolithPosition2d, val walls: List<RegolithWall>) {
+    var wallPositions : MutableSet<RegolithPosition2d> = mutableSetOf()
     var sandPositions : MutableSet<RegolithPosition2d> = mutableSetOf()
+    private var boundingBox = BoundingBox2d.fromPosition2d(start)
+
+    init {
+        require(walls.isNotEmpty())
+        boundingBox = walls
+            .map { it.positionBoundingBox() }
+            .fold(BoundingBox2d.fromPosition2d(start)) { acc, pos -> acc + pos }
+        wallPositions = walls
+            .map { it.allPositions }
+            .flatten().toMutableSet()
+    }
 
     operator fun List<RegolithWall>.contains(pos: RegolithPosition2d) : Boolean = this.any { pos in it }
     fun addSand() : Boolean {
@@ -64,9 +76,9 @@ data class RegolithCave(val start: RegolithPosition2d, val walls: List<RegolithW
             return false
 
         while (true) {
-            val newPos = listOf(curPos.down(), curPos.downLeft(), curPos.downRight())
+            val newPos = arrayListOf(curPos.down(), curPos.downLeft(), curPos.downRight())
                 .firstNotNullOfOrNull { newPos ->
-                    if (newPos in walls || newPos in sandPositions)
+                    if (newPos in wallPositions || newPos in sandPositions)
                         null
                     else
                         newPos
@@ -86,10 +98,7 @@ data class RegolithCave(val start: RegolithPosition2d, val walls: List<RegolithW
         }
     }
     fun positionBoundingBox() : BoundingBox2d {
-        require(walls.isNotEmpty())
-        return walls
-            .map { it.positionBoundingBox() }
-            .fold(BoundingBox2d.fromPosition2d(start)) { acc, pos -> acc + pos }
+        return boundingBox
     }
     fun prettyPrint() : String {
         val bb = positionBoundingBox()
@@ -113,7 +122,7 @@ data class RegolithCave(val start: RegolithPosition2d, val walls: List<RegolithW
     }
 }
 
-fun day14(test: Boolean = false) {
+fun day14(test: Boolean = true) {
     val inputText = if (test)
         """
             498,4 -> 498,6 -> 496,6
@@ -136,7 +145,7 @@ fun day14(test: Boolean = false) {
 
     // part A
     while (cave.addSand()) {true}
-    println(cave.prettyPrint())
+    //println(cave.prettyPrint())
     println("cave has ${cave.sandPositions.size} units of sand")
 
     // part B
@@ -148,6 +157,6 @@ fun day14(test: Boolean = false) {
         ))
     val cave2 = RegolithCave(start = sandOrigin, walls = walls + newWall)
     while (cave2.addSand()) {true}
-    println(cave2.prettyPrint())
+    //println(cave2.prettyPrint())
     println("cave has ${cave2.sandPositions.size} units of sand")
 }
