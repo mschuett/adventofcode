@@ -12,6 +12,13 @@ data class Position2d(val x: Int, val y: Int) {
                 && kotlin.math.abs(y - other.y) <= 1
     }
     infix fun notAdjTo(other: Position2d): Boolean = !this.adjTo(other)
+    override fun toString() : String = "$x,$y"
+    companion object Position2dBuilder {
+        fun fromString(input: String) : Position2d {
+            val (x, y) = input.split(',').map { it.toInt() }
+            return Position2d(x, y)
+        }
+    }
 }
 
 class LongRopeSim : RopeSim() {

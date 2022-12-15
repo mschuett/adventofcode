@@ -9,9 +9,21 @@ data class BoundingBox2d(var minX: Int, var maxX: Int, var minY: Int, var maxY: 
     operator fun plus(pos: RegolithPosition2d): BoundingBox2d {
         return plus(fromPosition2d(pos))
     }
+    operator fun plus(pos: Position2d): BoundingBox2d {
+        return plus(fromPosition2d(pos))
+    }
+    infix fun intersect(other: BoundingBox2d): BoundingBox2d =
+        BoundingBox2d(
+            minX = maxOf(minX, other.minX),
+            maxX = minOf(maxX, other.maxX),
+            minY = maxOf(minY, other.minY),
+            maxY = minOf(maxY, other.maxY),
+        )
+
     operator fun contains(pos: RegolithPosition2d) : Boolean = pos.x in minX..maxX && pos.y in minY..maxY
     companion object BoundingBox2dBuilder {
         fun fromPosition2d(pos: RegolithPosition2d) : BoundingBox2d = BoundingBox2d(pos.x, pos.x, pos.y, pos.y)
+        fun fromPosition2d(pos: Position2d) : BoundingBox2d = BoundingBox2d(pos.x, pos.x, pos.y, pos.y)
     }
 }
 
