@@ -62,7 +62,7 @@ data class SensorCave(val sensors: Iterable<Sensor>) {
         return covered
     }
 
-    fun getCoverageMissing(givenBB : BoundingBox2d) : List<Position2d> {
+    fun getCoverageMissing(givenBB : BoundingBox2d) : Set<Position2d> {
         // approach: split boundingBox into NxN grid of sub-boxes with edge length of smallest scan radius
         // then quickly dismiss all sub-boxes that are completely inside a sensors scan radius (=all four corners are inside)
         fun BoundingBox2d.splitBySize(r: Int) : Sequence<BoundingBox2d> = sequence {
@@ -82,48 +82,18 @@ data class SensorCave(val sensors: Iterable<Sensor>) {
             }
         }
 
-        // first level split
+        // first level split: by scan radius
         val r = sensors.minOf { it.scanDist }
-        var boxes1Total = 0
-        var boxes1Remaining = 0
-        // second level split
-        var boxes2Total = 0
-        var boxes2Remaining = 0
-        var boxes3Total = 0
-        var boxes3Remaining = 0
-        val toScanMoreClosely = givenBB
-            .splitBySize(r)
-            .also {
-                it.forEach { boxes1Total++ } }
-            .filterNot {
-                it.fullyScanned(sensors) }
-            .also {
-                it.forEach { boxes1Remaining++ } }
-            .flatMap { bb ->
-                bb.splitBySize(r/10)
-                    .also {
-                        it.forEach { boxes2Total++ } }
+        var bbList = listOf(givenBB)
+        listOf(1, 10, 100, 1000, 10000).forEach { i ->
+            bbList = bbList.flatMap { bb ->
+                bb.splitBySize(r / i )
                     .filterNot { it.fullyScanned(sensors) }
-                    .also {
-                        it.forEach { boxes2Remaining++ } }
             }
-            .flatMap { bb ->
-                bb.splitBySize(r/100)
-                    .also {
-                        it.forEach { boxes3Total++ } }
-                    .filterNot { it.fullyScanned(sensors) }
-                    .also {
-                        it.forEach { boxes3Remaining++ } }
-            }.toList()
-
-        println("getCoverageMissing: 1st scan picked $boxes1Remaining out of $boxes1Total boxes")
-        println("getCoverageMissing: 2nd scan picked $boxes2Remaining out of $boxes2Total boxes")
-        println("getCoverageMissing: 3nd scan picked $boxes3Remaining out of $boxes3Total boxes")
-        println("-> bb list of size ${toScanMoreClosely.size}")
-
-        val result = mutableListOf<Position2d>()
-        for ((i, bb) in toScanMoreClosely.withIndex()) {
-            print("\rgetCoverageMissing: now scanning $i/${toScanMoreClosely.size}")
+        }
+        val result = mutableSetOf<Position2d>()
+        for ((i, bb) in bbList.withIndex()) {
+            print("\rgetCoverageMissing: now scanning $i/${bbList.size-1}")
             for (y in bb.minY..bb.maxY) {
                 for (x in bb.minX..bb.maxX) {
                     val curPos = Position2d(x,y)
@@ -191,7 +161,7 @@ fun day15(test: Boolean = false) {
     val caveBb = cave.getBoundingBox(false)
     val bb = specBb intersect caveBb
     println("= Bounding boxes\nspec: $specBb\ncave: $caveBb\nintersect: $bb")
-    val missing = cave.getCoverageMissing(bb)
+    val missing = cave.getCoverageMissing(bb).toList()
     if (test) println(cave.prettyPrint(bb))
     if (missing.size == 1) {
         println("${missing.size} missing points: $missing")
@@ -199,5 +169,6 @@ fun day15(test: Boolean = false) {
         println("tuning frequency is $freq")
     } else {
         println("ERROR, found ${missing.size} missing points")
+        println(missing)
     }
 }
