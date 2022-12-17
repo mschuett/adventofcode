@@ -1,3 +1,5 @@
+import kotlin.math.pow
+
 typealias CaveRoomId = String
 
 data class Valve(val id: CaveRoomId, val flowRate: Int, val links: Iterable<CaveRoomId>) {
@@ -91,6 +93,23 @@ data class CaveOfValves(val valves: Collection<Valve>) {
             val nextStep = pathMap[curPos to curTarget]!![1]
             return walkValvesAlonePartA(minLeft - 1, nextStep, curTarget, opened, closed, events + nextStep, cumulatedFlow)
         }
+    }
+
+    // modified for Part B refined, allow overwriting the opened/closed sets
+    fun findOptimalActionsPartB2(
+        minutes: Int = 26,
+        start: CaveRoomId = "AA",
+        opened: List<CaveRoomId>,
+        closed: List<CaveRoomId>
+    ): Pair<Int, List<CaveRoomId>> {
+        // treat all 0 valves as opened -> simplifies path finding
+        return map.walkValvesAlonePartA(
+            minutes,
+            start,
+            start,
+            opened,
+            closed,
+        )
     }
 
 
@@ -216,7 +235,7 @@ fun <T, U> cartesianProduct(c1: Collection<T>, c2: Collection<U>): List<Pair<T, 
     return c1.flatMap { lhsElem -> c2.map { rhsElem -> lhsElem to rhsElem } }
 }
 
-fun day16(test: Boolean = true) {
+fun day16(test: Boolean = false) {
     val inputText = if (test)
         """
             Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
@@ -245,9 +264,62 @@ fun day16(test: Boolean = true) {
     val result = cave.findOptimalActionsPartA()
     println("$result ${result.second.size}")
 
-    // part B
-    val result2 = cave.findOptimalActionsPartB()
-    println(result2.first)
-    println("${result2.second.first()} ${result2.second.first().size}")
-    println("${result2.second.last()} ${result2.second.last().size}")
+    // part B -- brute force
+    if (test) {
+        val result2 = cave.findOptimalActionsPartB()
+        println(result2.first)
+        println("${result2.second.first()} ${result2.second.first().size}")
+        println("${result2.second.last()} ${result2.second.last().size}")
+    }
+    // part B refined
+    /* after I read online that the puzzle is designed to allow for an an even partition,
+    // i.e. it works if we split the valves in two sets and each actor works only on their own subset.
+    //
+    // I did not consider this to be the general case, I assumed one could construct a cave
+    // in which the optimal solution is for one actor to work on more valves than the other one.
+    // After thinking about it I conclude it works because the set of valves is larger than the
+    // set of actual actions. I.e. if we have 40 valves and each actor can work on 5-15 in the given time,
+    // then it simply does not matter if we split the 40 into 20/20 or into 18/22; the simulated outcome
+    // inside the time frame is the same.
+    */
+    fun generateAllEvenPartitions(s: List<CaveRoomId>): List<Pair<List<CaveRoomId>, List<CaveRoomId>>> {
+        val len = s.size
+        val halfLen = len.div(2)
+        println("list of size $len : $s")
+        assert (len % 2 == 0)
+
+        return (1..2.toFloat().pow(len).toInt() step(2))
+            .filter {
+                it.countOneBits() == halfLen
+            }
+//            .onEach {
+//                println("%3d -> %10s".format(it,it.toString(2)))
+//            }
+            .map {
+                var n = it
+                val setA = arrayListOf<CaveRoomId>()
+                val setB = arrayListOf<CaveRoomId>()
+                for (i in 0 until len) {
+                    if (n and 1 != 0) setA += s[i]
+                                 else setB += s[i]
+                    n = n shr 1
+                }
+                setA to setB
+            }
+    }
+    val listOfPartitions = generateAllEvenPartitions(cave.valves.filter {it.flowRate != 0}.map{it.id})
+    println("working on ${listOfPartitions.size} partitions...")
+
+    val bestActions = listOfPartitions
+        .asSequence()
+        .map { (a, b) ->
+            val (meScore, meEvents) = cave.findOptimalActionsPartB2(26, "AA", listOf(), a)
+            val (elScore, elEvents) = cave.findOptimalActionsPartB2(26, "AA", listOf(), b)
+            Triple(meScore+elScore, meEvents, elEvents)
+        }
+        .maxBy {
+            it.first
+        }
+    println("\n best is:\n${bestActions.first}\n${bestActions.second}\n${bestActions.third}\n")
+
 }
