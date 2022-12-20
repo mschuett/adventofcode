@@ -1,6 +1,6 @@
 import kotlin.math.sign
 
-data class Position2d(val x: Int, val y: Int) {
+data class Position2d(var x: Int, var y: Int) {
     infix fun stepTo(other: Position2d): Position2d {
         val newX = x + (other.x - x).sign
         val newY = y + (other.y - y).sign
