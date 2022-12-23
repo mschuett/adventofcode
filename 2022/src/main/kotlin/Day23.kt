@@ -49,9 +49,13 @@ data class ElfMap(
     val elves: Set<Elf>,
     var round: Int = 0,
     var directions: MutableList<Char> = mutableListOf('N', 'S', 'W', 'E')) {
+
+    private var elfPositions: Set<Position2d> = allElfPositions()  // for performance optimization
+    private fun allElfPositions() : Set<Position2d> = elves.map { it.pos }.toSet()
+
     fun isPosFree(l: List<Position2d>): Boolean =
-        l.all {p -> p !in elves.map {it.pos}}
-    fun nextDirection() {
+        l.all {p -> p !in elfPositions}
+    private fun nextDirection() {
         val tmp = directions.first()
         directions.removeAt(0)
         directions.add(tmp)
@@ -76,11 +80,13 @@ data class ElfMap(
                 false
             } // do not move, reset plan
         }
+
         // still moving
         nextDirection()
+        elfPositions = allElfPositions()
         return stillMoving.any()
     }
-    fun boundingbox(border: Int): BoundingBox2d =
+    private fun boundingbox(border: Int): BoundingBox2d =
         BoundingBox2d(
     elves.minOf { it.pos.x } - border,
     elves.maxOf { it.pos.x } + border,
