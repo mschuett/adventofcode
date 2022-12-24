@@ -21,6 +21,7 @@ data class BoundingBox2d(var minX: Int, var maxX: Int, var minY: Int, var maxY: 
         )
 
     operator fun contains(pos: RegolithPosition2d) : Boolean = pos.x in minX..maxX && pos.y in minY..maxY
+    operator fun contains(pos: Position2d) : Boolean = pos.x in minX..maxX && pos.y in minY..maxY
     companion object BoundingBox2dBuilder {
         fun fromPosition2d(pos: RegolithPosition2d) : BoundingBox2d = BoundingBox2d(pos.x, pos.x, pos.y, pos.y)
         fun fromPosition2d(pos: Position2d) : BoundingBox2d = BoundingBox2d(pos.x, pos.x, pos.y, pos.y)

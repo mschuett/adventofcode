@@ -32,23 +32,30 @@ data class MonkeyMap(val walkable: Set<Position2d>, val walls: Set<Position2d>) 
     }
 }
 
-enum class Direction (val i: Int){
-    E(0),
-    S(1),
-    W(2),
-    N(3);
+enum class Direction (val i: Int, val c: Char){
+    E(0, '>'),
+    S(1, 'v'),
+    W(2, '<'),
+    N(3, '^');
     fun turn(c: Char): Direction =
         when (c) {
             'R' -> Direction.fromInt((i + 1).mod(Direction.values().size))
             'L' -> Direction.fromInt((i - 1).mod(Direction.values().size))
             else -> throw IllegalStateException("unexpected char")
         }
+    override fun toString(): String = c.toString()
     companion object {
         fun fromInt(i: Int): Direction =
             Direction
                 .values()
                 .find {
                     i == it.i
+                }!!
+        fun fromChar(c: Char): Direction =
+            Direction
+                .values()
+                .find {
+                    c == it.c
                 }!!
     }
 }
