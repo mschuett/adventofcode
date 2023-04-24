@@ -1,24 +1,28 @@
 enum class BpMaterial(val i: Int) {
     NONE(i=0),
-    ORE(i=0),
-    CLAY(i=1),
-    OBSIDIAN(i=2),
-    GEODE(i=3),
+    ORE(i=1),
+    CLAY(i=2),
+    OBSIDIAN(i=3),
+    GEODE(i=4),
 }
+
 data class Blueprint(
     val id: Int,
-    val robotCosts: Map<BpMaterial,Map<BpMaterial,Int>>,
-//    val oreRobotCost: Int,
-//    val clayRobotCost: Int,
-//    val obsidianRobotCost: Pair<Int,Int>,  // ore + clay
-//    val geodeRobotCost: Pair<Int,Int>,     // ore + obsidian
+    val oreRobotCost: Int,
+    val clayRobotCost: Int,
+    val obsidianRobotCost: Pair<Int,Int>,  // ore + clay
+    val geodeRobotCost: Pair<Int,Int>,     // ore + obsidian
     ) {
+    val maxOreCost = maxOf(oreRobotCost, clayRobotCost, obsidianRobotCost.first, geodeRobotCost.first)
+
     companion object {
         fun fromString(input: String) : Blueprint {
             val (idPart, specPart) = input.split(": ")
             val id = idPart.split(' ')[1].toInt()
-            val spec : MutableMap<BpMaterial,MutableMap<BpMaterial,Int>> = mutableMapOf()
-
+            var oreRobotCost = 0
+            var clayRobotCost = 0
+            var obsidianRobotCost = 0 to 0
+            var geodeRobotCost = 0 to 0
             specPart.split('.')
                 .filter { it.isNotEmpty() }
                 .forEach {
@@ -27,95 +31,182 @@ data class Blueprint(
                     require(words[2] == "robot")
                     require(words[3] == "costs")
                     require(words[5] == "ore")
-                    val targetMaterial = BpMaterial.valueOf(words[1].uppercase())
-                    val costOre = words[4].toInt()
-                    spec[targetMaterial] = mutableMapOf()
-                    spec[targetMaterial]!![BpMaterial.ORE] = costOre
-                    if (words.size > 6 && words[6] == "and") {  // second material
-                        require(words.size == 9)
-                        val costOther = words[7].toInt()
-                        val materialOther = BpMaterial.valueOf(words[8].uppercase())
-                        spec[targetMaterial]!![materialOther] = costOther
+                    require(words.size == 6 || words.size == 9)
+                    when (words[1]) {
+                        "ore"      -> oreRobotCost = words[4].toInt()
+                        "clay"     -> clayRobotCost = words[4].toInt()
+                        "obsidian" -> obsidianRobotCost = words[4].toInt() to words[7].toInt()
+                        "geode"    -> geodeRobotCost = words[4].toInt() to words[7].toInt()
                     }
             }
-            // special recipe: we can always do nothing
-            spec[BpMaterial.NONE] = mutableMapOf(BpMaterial.ORE to 0)
-            return Blueprint(id, spec)
+            return Blueprint(id, oreRobotCost, clayRobotCost, obsidianRobotCost, geodeRobotCost)
         }
     }
 }
 
-data class FactorySim(val blueprint: Blueprint,
-                      var minutes: Int = 1,
-                      val maxMinutes : Int = 24,
-                      val robots: MutableList<Int> = mutableListOf(1,0,0,0),
-                      val inventory: MutableList<Int> = mutableListOf(0,0,0,0),
-                      val nextTarget: BpMaterial = BpMaterial.ORE,
+/* state is always at the _start_ of the minute, before any action */
+data class SimulationState(
+    val blueprint: Blueprint,
+    val maxMinutes : Int = 24,
+    val minute: Int = 1,
+    val robots: List<Int> = listOf(0,1,0,0,0),
+    val inventory: List<Int> = listOf(0,0,0,0,0),
+    val productionTarget: BpMaterial = BpMaterial.NONE,
 ) {
-    private val maxOreCost = blueprint.robotCosts.maxOf { (_,cost) ->
-        cost.getOrDefault(BpMaterial.ORE, 0)
-    }
-    private val maxClayCost = blueprint.robotCosts.maxOf { (_,cost) ->
-        cost.getOrDefault(BpMaterial.CLAY, 0)
-    }
-    fun canBuild(target: BpMaterial): Boolean =
-        (target == BpMaterial.NONE)
-                || blueprint.robotCosts[target]!!.all { (type, cost) ->
-                inventory[type.i] >= cost
+    override fun toString(): String {
+        var outstr = "== Minute $minute == Target: ${productionTarget.toString().lowercase()}\n"
+        BpMaterial.values().forEach {
+            if (robots[it.i] > 0) {
+                outstr += "${robots[it.i]} ${it.toString().lowercase()}-collecting robots collect ${robots[it.i]} ${it.toString().lowercase()};" +
+                        " you now have ${inventory[it.i] + robots[it.i]} ${it.toString().lowercase()}.\n"
             }
-    fun doBuild(target: BpMaterial) : FactorySim {
-        if (target == BpMaterial.NONE) return this
-        blueprint.robotCosts[target]!!.forEach { (type, cost) ->
-            require(inventory[type.i] >= cost)
-            inventory[type.i] -= cost
         }
-        robots[target.i]++
-        return this
+        if (canBuild && productionTarget != BpMaterial.NONE) {
+            outstr += "The new ${productionTarget.toString().lowercase()}-collecting robot is ready; you now have ${robots[productionTarget.i] + 1} of them.\n"
+        }
+        return outstr
     }
 
-    fun iterate(): Int {
-        print("iterate bp#${blueprint.id} min $minutes, R:$robots, I:$inventory")
-        if (minutes == maxMinutes) {
-            println("  -> end with ${inventory[BpMaterial.GEODE.i]} geodes\n")
-            return inventory[BpMaterial.GEODE.i]
+    private val canBuild: Boolean =
+        when (productionTarget) {
+            BpMaterial.NONE -> true
+            BpMaterial.ORE -> inventory[BpMaterial.ORE.i] >= blueprint.oreRobotCost
+            BpMaterial.CLAY -> inventory[BpMaterial.ORE.i] >= blueprint.clayRobotCost
+            BpMaterial.OBSIDIAN -> inventory[BpMaterial.ORE.i] >= blueprint.obsidianRobotCost.first && inventory[BpMaterial.CLAY.i] >= blueprint.obsidianRobotCost.second
+            BpMaterial.GEODE -> inventory[BpMaterial.ORE.i] >= blueprint.geodeRobotCost.first && inventory[BpMaterial.OBSIDIAN.i] >= blueprint.geodeRobotCost.second
         }
-        // robots active
-        for (i in robots.indices) {
-            inventory[i] += robots[i]
-        }
-        val possibleBuilds : List<BpMaterial> = BpMaterial.values().reversed()
-                .filter { target ->
-                    val can = canBuild(target)
-                    when (target) {
-                        BpMaterial.NONE -> can && !canBuild(BpMaterial.CLAY) && (robots.sum() > minutes/2)
-                        BpMaterial.ORE -> can && (robots[BpMaterial.ORE.i] < maxOreCost) && (inventory[BpMaterial.ORE.i] < maxOreCost)
-                        BpMaterial.CLAY -> can && (robots[BpMaterial.CLAY.i] < maxClayCost) && (inventory[BpMaterial.CLAY.i] < maxClayCost)
-                        else -> can
-                    }
+
+    private val possibleBuilds : List<BpMaterial> =
+        BpMaterial.values().reversed()
+            .filter { target ->
+                when (target) {
+                    BpMaterial.NONE -> false
+                    BpMaterial.ORE -> (robots[BpMaterial.ORE.i] < blueprint.maxOreCost)
+                    BpMaterial.CLAY -> (robots[BpMaterial.CLAY.i] < blueprint.obsidianRobotCost.second)
+                    BpMaterial.OBSIDIAN -> robots[BpMaterial.CLAY.i] > 0 && (robots[BpMaterial.OBSIDIAN.i] < blueprint.geodeRobotCost.second)
+                    BpMaterial.GEODE -> robots[BpMaterial.OBSIDIAN.i] > 0
+                }
+            }
+
+    private fun doBuilding(oldInventory: List<Int>, oldRobots: List<Int>): Pair<MutableList<Int>, MutableList<Int>> {
+        val inventory = oldInventory.toMutableList()
+        val robots = oldRobots.toMutableList()
+        if (canBuild) {
+            when (productionTarget) {
+                BpMaterial.NONE -> {}
+                BpMaterial.ORE -> {
+                    inventory[BpMaterial.ORE.i] -= blueprint.oreRobotCost
+                    robots[productionTarget.i] += 1
                 }
 
-        if (possibleBuilds.isEmpty()) {
-            println("  -> build NONE")
-            return this.copy(minutes = minutes + 1, robots = robots.toMutableList(), inventory = inventory.toMutableList()).iterate()
+                BpMaterial.CLAY -> {
+                    inventory[BpMaterial.ORE.i] -= blueprint.clayRobotCost
+                    robots[productionTarget.i] += 1
+                }
+
+                BpMaterial.OBSIDIAN -> {
+                    inventory[BpMaterial.ORE.i] -= blueprint.obsidianRobotCost.first
+                    inventory[BpMaterial.CLAY.i] -= blueprint.obsidianRobotCost.second
+                    robots[productionTarget.i] += 1
+                }
+
+                BpMaterial.GEODE -> {
+                    inventory[BpMaterial.ORE.i] -= blueprint.geodeRobotCost.first
+                    inventory[BpMaterial.OBSIDIAN.i] -= blueprint.geodeRobotCost.second
+                    robots[productionTarget.i] += 1
+                }
+            }
         }
-        else if (possibleBuilds.first() == BpMaterial.GEODE) {
-            // for better robot: only build this
-            doBuild(possibleBuilds.first())
-            println("  -> build ${possibleBuilds.first()}")
-            return this.copy(minutes = minutes + 1, robots = robots.toMutableList(), inventory = inventory.toMutableList()).iterate()
-        }
-        else { // decision/branching time
-            return possibleBuilds.map { target ->
-                println("  -> take option for $target")
-                this.copy(minutes = minutes + 1, robots = robots.toMutableList(), inventory = inventory.toMutableList())
-                .doBuild(target)
-                .iterate()
-            }.max()
+        return inventory to robots
+    }
+
+    private fun doRobots(inventory: List<Int>, robots: List<Int>) : MutableList<Int> {
+        // optimized, the list builder is really slow...
+        return mutableListOf(
+            inventory[0] + robots[0],
+            inventory[1] + robots[1],
+            inventory[2] + robots[2],
+            inventory[3] + robots[3],
+            inventory[4] + robots[4],
+        )
+    }
+
+    fun iterate(): List<SimulationState> {
+        var (newInventory, newRobots) = doBuilding(inventory, robots)
+        newInventory = doRobots(newInventory, robots)
+
+        if (canBuild) {
+            require(possibleBuilds.isNotEmpty())
+            return possibleBuilds.map { newTarget ->
+                SimulationState(
+                    blueprint,
+                    maxMinutes,
+                    minute + 1,
+                    newRobots,
+                    newInventory,
+                    newTarget,
+                )
+            }
+        } else {
+            return listOf(SimulationState(
+                blueprint,
+                maxMinutes,
+                minute + 1,
+                robots,
+                newInventory.toMutableList(),
+                productionTarget,
+            ))
         }
     }
 }
 
-fun day19(test: Boolean = true) {
+// Part A
+fun getMaxGeodes(history: List<SimulationState>): Pair<Int, List<SimulationState>> {
+    val state: SimulationState = history.last()
+    return if (state.minute > state.maxMinutes) {
+        state.inventory[BpMaterial.GEODE.i] to history
+    } else {
+        state.iterate()
+            .map {
+                getMaxGeodes(history + it)
+            }
+            .maxBy { it.first }
+    }
+}
+
+// optimized for Part B,
+// discard history and follow todd.ginsberg.com with using a work queue or a stack
+fun getMaxGeodes2(init: SimulationState): Int {
+    val workQueue = ArrayDeque<SimulationState>()
+    workQueue.add(init)
+    var maxGeodes = 0
+
+    while (workQueue.isNotEmpty()) {
+        val state = workQueue.removeFirst()
+
+        // check new best value
+        if (state.minute > state.maxMinutes) {
+            if (state.inventory[BpMaterial.GEODE.i] > maxGeodes) {
+                maxGeodes = state.inventory[BpMaterial.GEODE.i]
+                // println("found $maxGeodes...")
+            }
+            continue
+        }
+
+        // prune check if best value can be reached
+        val minLeft = state.maxMinutes + 1 - state.minute
+        val maxPossibleGeodes = state.inventory[BpMaterial.GEODE.i] + (state.robots[BpMaterial.GEODE.i] * minLeft) + (minLeft*minLeft)
+        if ( maxPossibleGeodes < maxGeodes )
+            continue
+
+        // iterate
+        workQueue.addAll(0, state.iterate())
+    }
+    return maxGeodes
+}
+
+
+fun day19(test: Boolean = false) {
     val inputText = if (test)
         """
         Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
@@ -135,22 +226,23 @@ fun day19(test: Boolean = true) {
     // Part A
     blueprints
         .map {
-            FactorySim(it)
+            getMaxGeodes(listOf(SimulationState(it)))
         }
-        .onEach(::println)
-        .map {
-            it.iterate() to it
+        .sumOf {
+            println("Blueprint ${it.second.first().blueprint.id} with ${it.first} max geodes  -> quality level ${it.first * it.second.first().blueprint.id}")
+            it.first * it.second.first().blueprint.id
         }
-        .onEach(::println)
-//        .maxBy{ it.first }
-        .map { (num, sim) ->
-            num * sim.blueprint.id
-        }
-        .also(::println)
-        .sum()
-        .also(::println)
-
+        .also { println("puzzle answer: $it") }
 
     // Part B
-
+    blueprints
+        .take(3)
+        .map {
+            getMaxGeodes2(SimulationState(it, maxMinutes = 32))
+        }
+        .onEach {
+            println("$it max geodes")
+        }
+        .reduce { product, element -> product * element }
+        .also { println("puzzle answer: $it") }
 }
