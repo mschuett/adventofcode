@@ -24,7 +24,4 @@ def solve():
     print("sum: ", sum(itertools.starmap((lambda a,b: abs(a-b)), zip(left, right))))
 
     # part 2
-    similarity_score = 0
-    for item in left:
-        similarity_score += item * right.count(item)
-    print("score: ", similarity_score)
+    print("score: ", sum([item * right.count(item) for item in left]))
