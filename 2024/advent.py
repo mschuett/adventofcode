@@ -1,3 +1,3 @@
-from days.day05 import solve
+from days.day06 import solve
 
 solve()
