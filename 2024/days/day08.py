@@ -24,6 +24,8 @@ class Coordinate(object):
         return Coordinate(self.x-other.x, self.y-other.y)
     def __add__(self, other: 'Coordinate') -> 'Coordinate':
         return Coordinate(self.x+other.x, self.y+other.y)
+    def __mul__(self, other: int):
+        return Coordinate(self.x*other, self.y*other)
     def reduce_fraction(self) -> 'Coordinate':
         """observation: this was not necessary for my input"""
         f = fractions.Fraction(self.x, self.y)
