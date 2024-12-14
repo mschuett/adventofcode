@@ -12,6 +12,9 @@ advent_headers = {
     'User-Agent': f'python-requests/{requests.__version__} (custom tooling by https://github.com/mschuett/)'
 }
 
+def is_example() -> bool:
+    return not bool(os.environ.get('ADVENT_GET_REAL_INPUT', False))
+
 def get_input_data(year=2024, day=1, example_data="") -> str:
     """provide example data or real input data for day of year, depending on ADVENT_GET_REAL_INPUT.
     real input data is cached. download needs a session cookie in ADVENT_AUTH_SESSION_ID"""
