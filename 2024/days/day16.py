@@ -1,19 +1,25 @@
 import textwrap
-import collections
 from typing import *
-from enum import Enum,auto
+import queue
+from enum import IntEnum
 
 from .helper import get_input_data
 
-class Direction(Enum):
-    N = auto()
-    E = auto()
-    S = auto()
-    W = auto()
+class Direction(IntEnum):
+    N = 0
+    E = 1
+    S = 2
+    W = 3
     def __str__(self):
         return self.name
     def __repr__(self):
         return self.name
+    def turn_right(self) -> "Direction":
+        return Direction((self.value + 1) % 4)
+    def turn_left(self) -> "Direction":
+        return Direction((self.value + 3) % 4)
+    def turn_back(self) -> "Direction":
+        return Direction((self.value + 2) % 4)
 
 # try if a NamedTuple is faster than a real class
 class Coordinate(NamedTuple):
@@ -28,6 +34,8 @@ class Coordinate(NamedTuple):
             return Coordinate(self.x, self.y + 1)
         elif d == Direction.W:
             return Coordinate(self.x - 1, self.y)
+        else:
+            raise ValueError()
     def neighbours(self) -> dict['Coordinate', Direction]:
         return {
             Coordinate(self.x, self.y - 1): Direction.N,
@@ -35,12 +43,14 @@ class Coordinate(NamedTuple):
             Coordinate(self.x, self.y + 1): Direction.S,
             Coordinate(self.x - 1, self.y): Direction.W,
         }
+    def distance(self, other: 'Coordinate') -> int:
+        return abs(self.x - other.x) + abs(self.y - other.y)
 
 class MazePos(NamedTuple):
+    dist: int
+    cost: int
     pos: Coordinate
     dir: Direction
-    # visited: set[Coordinate]
-    cost: int
 
 class ReindeerMaze(object):
     width: int
@@ -48,7 +58,7 @@ class ReindeerMaze(object):
     walls: set[Coordinate]
     start: Coordinate
     end: Coordinate
-    best_walk: MazePos | None
+    cost_from_start: dict[tuple[Coordinate,Direction],int] | None
 
     def __init__(self, input_text: str) -> None:
         lines = [l.strip() for l in input_text.strip().split('\n')]
@@ -57,7 +67,7 @@ class ReindeerMaze(object):
         assert self.width == self.height
         assert all([len(l) == self.width for l in lines])
         self.walls = set()
-        self.best_walk = None
+        self.cost_from_start = None
 
         for y in range(self.height):
             for x in range(self.width):
@@ -77,7 +87,7 @@ class ReindeerMaze(object):
     def __str__(self) -> str:
         return self.prettyprint()
 
-    def prettyprint(self, visited: set[Coordinate] = frozenset()) -> str:
+    def prettyprint(self, visited: Iterable[Coordinate] = frozenset()) -> str:
         outstr = self.__repr__() + '\n'
         for y in range(self.height):
             for x in range(self.width):
@@ -98,52 +108,77 @@ class ReindeerMaze(object):
     def is_free(self, pos: Coordinate) -> bool:
         return pos not in self.walls
 
-    def walk(self) -> int:
-        working_set = collections.deque([MazePos(self.start, Direction.E, 0)])
-        best_walk: MazePos | None = None
-        least_cost_to_pos: dict[Coordinate, int] = {}
+    def walk_dir(self, start: Coordinate, end: Coordinate, dir: Direction) -> dict[tuple[Coordinate,Direction], int]:
+        startpos = MazePos(end.distance(start), 0, start, dir)
+        working_set: queue.PriorityQueue = queue.PriorityQueue()
+        working_set.put(startpos)
+
+        least_cost_to_pos: dict[tuple[Coordinate,Direction], int] = {}
         all_cell_count = self.width * self.height - len(self.walls)
         iteration = 0
 
-        while working_set:
-            cur_pos, cur_dir, cur_cost = working_set.pop()
-
-            if iteration % 1000 == 0:
-                print(f'iteration {iteration}, deque size {len(working_set)}, visited cells {len(least_cost_to_pos)}/{all_cell_count}')
+        while not working_set.empty():
+            cur_dist, cur_cost, cur_pos, cur_dir = working_set.get()
+            if iteration % 1000000 == 0:
+                print(f'  # iteration {iteration}, queue size {working_set.qsize()}, visited cells {len(least_cost_to_pos)}/{all_cell_count}')
             iteration += 1
 
-            if cur_pos not in least_cost_to_pos:
-                least_cost_to_pos[cur_pos] = cur_cost
-            elif cur_pos in least_cost_to_pos and least_cost_to_pos[cur_pos] + 1001 < cur_cost:
+            if (cur_pos,cur_dir) in least_cost_to_pos and least_cost_to_pos[cur_pos,cur_dir] < cur_cost:
                 continue  # current path+turning is longer than alternative, end of path
-
-            if best_walk and best_walk.cost < cur_cost:
-                continue  # current path is longer than alternative, end of path
-            if cur_pos == self.end:
-                if not (best_walk and best_walk.cost < cur_cost):
-                    best_walk = MazePos(cur_pos, cur_dir, cur_cost)
-                    print(f"found a walk with cost {cur_cost}, remaining deque length is {len(working_set)}")
+            if cur_pos == end:
+                print(f"found a walk with cost {cur_cost}, remaining deque length is {working_set.qsize()}")
                 continue  # else nothing, end of path
 
-            neighbors = cur_pos.neighbours()
-            options = [pos for pos in neighbors.keys()
-                       if pos not in self.walls]
+            # alternatives forward:
+            for new_dir,new_cost in [
+                (cur_dir, cur_cost + 1),
+                (cur_dir.turn_left(), cur_cost + 1001),
+                (cur_dir.turn_right(), cur_cost + 1001),
+            ]:
+                new_pos = cur_pos.step(new_dir)
+                if (new_pos not in self.walls
+                        and ((new_pos, new_dir) not in least_cost_to_pos
+                             or least_cost_to_pos[(new_pos, new_dir)] > new_cost)
+                ):
+                    new_dist = self.end.distance(new_pos)
+                    # special case: if we turned, then we also have to remember the cur_pos with turn
+                    if new_dir != cur_dir:
+                        least_cost_to_pos[cur_pos,new_dir] = cur_cost + 1000
+                    least_cost_to_pos[new_pos,new_dir] = new_cost
+                    working_set.put(MazePos(new_dist, new_cost, new_pos, new_dir))
+        return least_cost_to_pos
 
-            if len(options) == 0:
-                continue  # dead end, end of path
+    def part1(self) -> int:
+        if self.cost_from_start is None:
+            self.cost_from_start = self.walk_dir(self.start, self.end, Direction.E)
+        return min(
+            [c for c in [
+                self.cost_from_start.get((self.end, d), None) for d in Direction
+            ] if c]
+        )
 
-            # assert len(options) == 1 or len(options) == 2
-            pos_ahead = cur_pos.step(cur_dir)
-            for opt in options:
-                if opt == pos_ahead:
-                    step_cost = 1
-                    working_set.append(MazePos(opt, neighbors[opt], cur_cost+step_cost))
-                else:
-                    step_cost = 1001
-                    working_set.appendleft(MazePos(opt, neighbors[opt], cur_cost+step_cost))
-        print(f"found path with cost {best_walk.cost}")
-        self.best_walk = best_walk
-        return best_walk.cost
+    def part2(self) -> int:
+        # two end points to build alternative distance costs
+        cost_table_end1 = self.walk_dir(self.end, self.start, Direction.W)
+        cost_table_end2 = self.walk_dir(self.end, self.start, Direction.S)
+        result = {self.start, self.end}
+
+        # check if cost from start and cost from end combine for the best path length
+        best_path_cost = self.part1()
+        for y in range(self.height):
+            for x in range(self.width):
+                pos = Coordinate(x,y)
+                if pos in self.walls: continue
+                for dir in Direction:
+                    cost_from_start = self.cost_from_start.get((pos, dir), -1)
+                    cost_from_end1 = cost_table_end1.get((pos, dir.turn_back()), -1)
+                    cost_from_end2 = cost_table_end2.get((pos, dir.turn_back()), -1)
+                    if (cost_from_start >= 0
+                        and ((cost_from_end1 >= 0 and cost_from_start + cost_from_end1 == best_path_cost)
+                          or (cost_from_end2 >= 0 and cost_from_start + cost_from_end2 == best_path_cost))):
+                        result.add(pos)  # ignore dir
+        print(f"found {len(result)} best positions: {result}")
+        return len(result)
 
 
 def solve():
@@ -190,6 +225,7 @@ def solve():
     # part 1
     m = ReindeerMaze(textwrap.dedent(input_text))
     print(m)
-    m.walk()
+    print(f"lowest cost: {m.part1()}")
 
     # part 2
+    print(f"best tiles: {m.part2()}")
