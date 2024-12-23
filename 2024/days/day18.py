@@ -1,5 +1,3 @@
-from operator import length_hint
-
 from .helper import get_input_data,is_example
 
 from typing import *
