@@ -19,3 +19,15 @@ I started the 2015 puzzles later as a way to write my very first Code in Kotlin.
 ## 2022
 
 I go with Kotlin again. I am kind of stressed out, so I do not want to lean a completely new language but also do not want Python or Golang again.
+
+## 2023
+
+Same as before, Kotlin it is.
+
+## 2024
+
+I work too much and come back to Python.
+
+## 2025
+
+Time for new challenges, I want to learn Rust.
