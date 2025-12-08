@@ -1,6 +1,7 @@
 mod helper;
-mod day07;
+mod day08;
+mod coord3d;
 
 fn main() {
-    day07::solve();
+    day08::solve();
 }
