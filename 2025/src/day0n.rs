@@ -1,17 +1,15 @@
 use crate::helper;
 
 fn solve_part1(input_text: String) -> String {
-    let _input_example = "";
-    todo!("write me");
+    String::from("missing")
 }
 
 fn solve_part2(input_text: String) -> String {
-    let _input_example = "";
-    todo!("write me");
+    String::from("missing")
 }
 
 pub fn solve() {
-    let input_text = helper::fetch_cache_input_text(2024, 2)
+    let input_text = helper::fetch_cache_input_text(2025, 1)
             .expect("Could not fetch input");
     let _ = example_text();
 
@@ -32,12 +30,12 @@ mod tests {
     #[test]
     fn test_part1() {
         let result = solve_part1(example_text());
-        assert_eq!(result, "3");
+        assert_eq!(result, "0");
     }
 
     #[test]
     fn test_part2() {
         let result = solve_part2(example_text());
-        assert_eq!(result, "6");
+        assert_eq!(result, "0");
     }
 }
