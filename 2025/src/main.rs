@@ -1,7 +1,8 @@
+#![feature(trim_prefix_suffix)]
+
 mod helper;
-mod day09;
-mod coord2d;
+mod day10;
 
 fn main() {
-    day09::solve();
+    day10::solve();
 }
