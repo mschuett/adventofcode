@@ -2,6 +2,8 @@ use crate::helper;
 use std::fmt;
 use std::collections::VecDeque;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
 
 struct Machine {
     desired_state: Vec<bool>,
@@ -141,8 +143,67 @@ fn solve_part1(input_text: String) -> String {
     solution_steps.iter().sum::<u32>().to_string()
 }
 
+// using an LP solver (microlp)
+// this is a way too comlicated function to generate its input config
+fn lp_solve(joltages: Vec<u16>, buttons: Vec<Vec<u8>>, machine_number: usize) -> u32 {
+    let upper_bound: i32 = *joltages.iter().max().unwrap() as i32;
+    let num_vars = buttons.len();
+    let mut problem = microlp::Problem::new(microlp::OptimizationDirection::Minimize);
+
+    let mut vars: Vec<microlp::Variable> = Vec::with_capacity(num_vars);
+    for _i in 0..num_vars {
+        // every button gets a variable
+        let v = problem.add_integer_var(1.0, (0, upper_bound));
+        vars.push(v);
+    }
+
+    // also write an lp_solve text for verification/debugging
+    let mut text: String = String::from("");
+    let text_vars: Vec<String> = (0..num_vars)
+        .map(|i| ((b'a' + i as u8) as char).to_string())
+        .collect();
+    text += &*("min: ".to_owned() + &text_vars.join(" + ") + ";\n\n");
+    text += &text_vars.iter().map(|c| format!("{} >= 0;\n", c)).collect::<String>();
+
+    for (j, joltage) in joltages.iter().enumerate() {
+        // every joltage gets a constraint
+        let result = *joltage as f64;
+        let mut lin_exp: microlp::LinearExpr = microlp::LinearExpr::empty();
+
+        let mut text_constraint_vars: Vec<String> = Vec::with_capacity(num_vars);
+        // get all buttons that increase this joltage and add to expression
+        for i in 0..num_vars {
+            if buttons[i].contains(&(j as u8)) {
+                lin_exp.add(vars[i], 1.0);
+                text_constraint_vars.push(text_vars[i].clone());
+            }
+        }
+        text += format!("{} = {};\n", text_constraint_vars.join("+"), joltage).as_str();
+        problem.add_constraint(lin_exp, microlp::ComparisonOp::Eq, result);
+    }
+
+    // finish debug output to lpsolve.txt file
+    text += format!("\nint var {};\n", &text_vars.join(", ")).as_str();
+    let mut file = File::create(format!("day10_{}_lpsolve.txt", machine_number)).unwrap();
+    file.write_all(text.as_bytes()).unwrap();
+
+    // argh, this is so stupid. the round() is important, without it my answer is 'too low' :-(
+    let solution = problem.solve().unwrap();
+    solution.objective().round() as u32
+}
+
+
 fn solve_part2(input_text: String) -> String {
-    0.to_string()
+    let machines = parse_input(&input_text);
+    let mut solution_steps: Vec<u32> = Vec::with_capacity(machines.len());
+    for (i, m) in machines.into_iter().enumerate() {
+        let solution = lp_solve(m.joltages, m.buttons, i);
+        // println!("#{} => {} buttons", i, solution);
+        solution_steps.push(solution);
+    }
+    let sum = solution_steps.iter().sum::<u32>();
+    // println!("{} machines => sum {}", solution_steps.len(), sum);
+    sum.to_string()
 }
 
 
