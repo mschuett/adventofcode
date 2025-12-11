@@ -1,8 +1,6 @@
-#![feature(trim_prefix_suffix)]
-
+mod day11;
 mod helper;
-mod day12;
 
 fn main() {
-    day12::solve();
+    day11::solve();
 }
