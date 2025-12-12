@@ -13,9 +13,8 @@ pub fn solve() {
             .expect("Could not fetch input");
     let _ = example_text();
 
-    print!("Part 1: {}\nPart 2: {}\n",
-           solve_part1(input_text.clone()),
-           solve_part2(input_text));
+    println!("Part 1: {}", solve_part1(input_text.clone()));
+    println!("Part 2: {}", solve_part2(input_text));
 }
 
 fn example_text() -> String {
