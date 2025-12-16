@@ -2,17 +2,54 @@ use crate::helper;
 use std::collections::HashMap;
 use std::time::Instant;
 
+#[derive(Debug)]
+struct Device {
+    pub name: String,
+    pub links: Vec<&'static Box<Self>>,
+}
+
+
 struct DeviceManager {
     devices: HashMap<String, Vec<String>>,
 }
 impl DeviceManager {
     fn from(input_text: &str) -> Self {
         let mut stringmap: HashMap<String, Vec<String>> = HashMap::new();
+        let mut devices: Vec<Box<Device>> = Vec::with_capacity(500);
+        let mut indexmap: HashMap<String, usize> = HashMap::new();
+        let mut i: usize = 0;
+
         for line in input_text.lines() {
             let (cur, outstext) = line.split_once(": ").unwrap();
             let outs: Vec<String> = outstext.split_whitespace()
                 .map(|s| s.to_string()).collect();
-            stringmap.insert(cur.to_string(), outs);
+            stringmap.insert(cur.to_string(), outs.clone());
+            let dev = Device { name: cur.to_string(), links: Vec::new() };
+            let boxed = Box::new(dev);
+            devices.push(boxed);
+            indexmap.insert(cur.to_string(), i);
+            i += 1;
+        }
+
+        // 2nd loop to fill in the Device links
+        for (name, index) in indexmap.iter() {
+            let dev_box_ref = &devices[*index];
+            let dev = dev_box_ref.as_ref();
+
+            let link_targets_strings = stringmap.get(name).unwrap();
+            let mut link_targets_devs: Vec<&Box<Device>> = Vec::new();
+
+            for target_string in link_targets_strings {
+                let target_index = indexmap.get(target_string).unwrap();
+                let target_dev = &devices[*target_index];
+                link_targets_devs.push(&target_dev.to_owned());
+            }
+
+            let foo = dev;
+            let bar = dev.links.to_owned();
+            dev.links = link_targets_devs.to_owned();
+
+
         }
         DeviceManager { devices: stringmap }
     }
