@@ -121,22 +121,17 @@ fun day16(test: Boolean = true) {
     println(map.beamWalk())
 
     // Part Two
-    val allStartBeams: MutableList<Beam> = mutableListOf()
-    (0..map.xMax).forEach { x ->
-        allStartBeams.add(Beam(Coord2D(x, -1), Direction2D.S))
-    }
-    (0..map.xMax).forEach { x ->
-        allStartBeams.add(Beam(Coord2D(x, map.yMax+1), Direction2D.N))
-    }
-    (0..map.yMax).forEach { y ->
-        allStartBeams.add(Beam(Coord2D(-1, y), Direction2D.E))
-    }
-    (0..map.yMax).forEach { y ->
-        allStartBeams.add(Beam(Coord2D(map.xMax+1, y), Direction2D.W))
-    }
-
-    allStartBeams.map { start ->
-        val energized = LaserMap2D.fromString(inputText, start).beamWalk()
-        start to energized
-    }.maxBy { it.second }.also(::println)
+    listOf(
+        (0..map.xMax).map { x -> Beam(Coord2D(x, -1), Direction2D.S) },
+        (0..map.xMax).map { x -> Beam(Coord2D(x, map.yMax+1), Direction2D.N) },
+        (0..map.yMax).map { y -> Beam(Coord2D(-1, y), Direction2D.E) },
+        (0..map.yMax).map { y -> Beam(Coord2D(map.xMax+1, y), Direction2D.W) }
+    )
+        .flatten()
+        .map { start ->
+            val energized = LaserMap2D.fromString(inputText, start).beamWalk()
+            start to energized
+        }
+        .maxBy { it.second }
+        .also(::println)
 }
