@@ -1,11 +1,11 @@
 use crate::helper;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-enum Register {
+pub(crate) enum Register {
     A = 0, B, C, D
 }
 impl Register {
-    fn from_str(s: &str) -> Register {
+    pub fn from_str(s: &str) -> Register {
         assert_eq!(s.len(), 1);
         let c = s.chars().next().unwrap();
         match c {
