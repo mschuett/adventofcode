@@ -31,3 +31,7 @@ I work too much and come back to Python.
 ## 2025
 
 Time for new challenges, I want to learn Rust.
+
+## 2016
+
+I did these in 2026 to continue with Rust.
