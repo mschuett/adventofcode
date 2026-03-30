@@ -41,15 +41,9 @@ fn solve_part2(input_text: String) -> String {
 pub fn solve() {
     let input_text = helper::fetch_cache_input_text(2017, 1)
             .expect("Could not fetch input");
-    let _ = example_text();
 
     println!("Part 1: {}", solve_part1(input_text.clone()));
     println!("Part 2: {}", solve_part2(input_text));
-}
-
-fn example_text() -> String {
-    String::from(
-        "")
 }
 
 #[cfg(test)]
