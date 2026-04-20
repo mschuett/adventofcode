@@ -34,7 +34,7 @@ fn solve_part1(input_text: String) -> String {
     find_group_size(&map, 0).to_string()
 }
 
-fn find_group_count(map: &HashMap<u16, Vec<u16>>) -> usize {
+pub fn find_group_count(map: &HashMap<u16, Vec<u16>>) -> usize {
     // approach: every group reveives an arbitrary group id
     let mut groups: HashMap<u16, u16> = HashMap::new();
     let mut new_id: u16 = 0;

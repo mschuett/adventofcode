@@ -69,7 +69,7 @@ fn get_lengths_part2(input_text: String) -> Vec<u8> {
     result
 }
 
-fn solve_part2(input_text: String) -> String {
+pub fn solve_part2(input_text: String) -> String {
     let list_size = 256;
     let mut circlist = CircularList::new(list_size);
     let lenghts: Vec<u8> = get_lengths_part2(input_text);
